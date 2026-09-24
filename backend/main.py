@@ -13,12 +13,21 @@ from anomaly_engine import anomaly_engine
 from ai_advisor import ai_advisor
 from seed import seed_database
 
-Base.metadata.create_all(bind=engine)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: Database initialization error on startup: {e}")
+    yield
 
 app = FastAPI(
     title="DairyGuard 360 API",
     description="Backend API for AI-Powered Dairy Plant Energy, Hygiene & Circular Packaging Intelligence Platform",
-    version="1.1.0"
+    version="1.1.0",
+    lifespan=lifespan
 )
 
 frontend_url = os.getenv("FRONTEND_URL")
