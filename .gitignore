@@ -1,0 +1,21 @@
+.env
+.env.*
+!.env.example
+
+# Python / Local Development
+__pycache__/
+*.py[cod]
+*.db
+.venv/
+venv/
+
+# Node / Build outputs
+node_modules/
+dist/
+dist-ssr/
+*.log
+
+# OS / Editor files
+.DS_Store
+.vscode/
+.idea/
