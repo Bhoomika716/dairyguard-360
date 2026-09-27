@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { DemoControlBar } from './components/demo/DemoControlBar';
@@ -6,17 +6,18 @@ import { AIAssistantDrawer } from './components/ai/AIAssistantDrawer';
 
 import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
-import { EquipmentIntelligence } from './pages/EquipmentIntelligence';
-import { EnergyIntelligence } from './pages/EnergyIntelligence';
-import { HygieneCompliance } from './pages/HygieneCompliance';
-import { PackagingWaste } from './pages/PackagingWaste';
-import { DigitalTwin } from './pages/DigitalTwin';
-import { WhatIfSimulator } from './pages/WhatIfSimulator';
-import { AIInsights } from './pages/AIInsights';
-import { AlertsCenter } from './pages/AlertsCenter';
-import { ConsumerPortal } from './pages/ConsumerPortal';
-import { AnalyticsReports } from './pages/AnalyticsReports';
-import { SettingsPage } from './pages/SettingsPage';
+
+const EquipmentIntelligence = lazy(() => import('./pages/EquipmentIntelligence').then(m => ({ default: m.EquipmentIntelligence })));
+const EnergyIntelligence = lazy(() => import('./pages/EnergyIntelligence').then(m => ({ default: m.EnergyIntelligence })));
+const HygieneCompliance = lazy(() => import('./pages/HygieneCompliance').then(m => ({ default: m.HygieneCompliance })));
+const PackagingWaste = lazy(() => import('./pages/PackagingWaste').then(m => ({ default: m.PackagingWaste })));
+const DigitalTwin = lazy(() => import('./pages/DigitalTwin').then(m => ({ default: m.DigitalTwin })));
+const WhatIfSimulator = lazy(() => import('./pages/WhatIfSimulator').then(m => ({ default: m.WhatIfSimulator })));
+const AIInsights = lazy(() => import('./pages/AIInsights').then(m => ({ default: m.AIInsights })));
+const AlertsCenter = lazy(() => import('./pages/AlertsCenter').then(m => ({ default: m.AlertsCenter })));
+const ConsumerPortal = lazy(() => import('./pages/ConsumerPortal').then(m => ({ default: m.ConsumerPortal })));
+const AnalyticsReports = lazy(() => import('./pages/AnalyticsReports').then(m => ({ default: m.AnalyticsReports })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 
 import type { RoleType, DashboardOverview } from './types';
 import { 
@@ -30,6 +31,13 @@ import {
   resetPlantSimulation,
   triggerSimulatedTick
 } from './services/api';
+
+const PageLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-cyan-400">
+    <div className="w-10 h-10 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin"></div>
+    <p className="text-sm font-medium tracking-wide text-slate-400 animate-pulse">Loading DairyGuard 360 Intelligence Module...</p>
+  </div>
+);
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('landing');
@@ -145,61 +153,63 @@ export function App() {
         />
 
         <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto overflow-y-auto w-full">
-          {activeTab === 'landing' && (
-            <LandingPage onLaunchDashboard={() => setActiveTab('dashboard')} />
-          )}
+          <Suspense fallback={<PageLoader />}>
+            {activeTab === 'landing' && (
+              <LandingPage onLaunchDashboard={() => setActiveTab('dashboard')} />
+            )}
 
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              data={dashboardData}
-              onNavigate={setActiveTab}
-              onOpenAIChat={() => setIsAIChatOpen(true)}
-            />
-          )}
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                data={dashboardData}
+                onNavigate={setActiveTab}
+                onOpenAIChat={() => setIsAIChatOpen(true)}
+              />
+            )}
 
-          {activeTab === 'equipment' && (
-            <EquipmentIntelligence />
-          )}
+            {activeTab === 'equipment' && (
+              <EquipmentIntelligence />
+            )}
 
-          {activeTab === 'energy' && (
-            <EnergyIntelligence data={energyData} />
-          )}
+            {activeTab === 'energy' && (
+              <EnergyIntelligence data={energyData} />
+            )}
 
-          {activeTab === 'hygiene' && (
-            <HygieneCompliance data={hygieneData} onRefresh={refreshAllData} />
-          )}
+            {activeTab === 'hygiene' && (
+              <HygieneCompliance data={hygieneData} onRefresh={refreshAllData} />
+            )}
 
-          {activeTab === 'waste' && (
-            <PackagingWaste data={wasteData} onNavigateConsumer={() => setActiveTab('consumer')} />
-          )}
+            {activeTab === 'waste' && (
+              <PackagingWaste data={wasteData} onNavigateConsumer={() => setActiveTab('consumer')} />
+            )}
 
-          {activeTab === 'digital-twin' && (
-            <DigitalTwin />
-          )}
+            {activeTab === 'digital-twin' && (
+              <DigitalTwin />
+            )}
 
-          {activeTab === 'simulator' && (
-            <WhatIfSimulator />
-          )}
+            {activeTab === 'simulator' && (
+              <WhatIfSimulator />
+            )}
 
-          {activeTab === 'insights' && (
-            <AIInsights />
-          )}
+            {activeTab === 'insights' && (
+              <AIInsights />
+            )}
 
-          {activeTab === 'alerts' && (
-            <AlertsCenter onTriggerIncident={handleTriggerIncident} />
-          )}
+            {activeTab === 'alerts' && (
+              <AlertsCenter onTriggerIncident={handleTriggerIncident} />
+            )}
 
-          {activeTab === 'consumer' && (
-            <ConsumerPortal />
-          )}
+            {activeTab === 'consumer' && (
+              <ConsumerPortal />
+            )}
 
-          {activeTab === 'reports' && (
-            <AnalyticsReports />
-          )}
+            {activeTab === 'reports' && (
+              <AnalyticsReports />
+            )}
 
-          {activeTab === 'settings' && (
-            <SettingsPage />
-          )}
+            {activeTab === 'settings' && (
+              <SettingsPage />
+            )}
+          </Suspense>
         </main>
       </div>
 
@@ -212,3 +222,4 @@ export function App() {
 }
 
 export default App;
+
