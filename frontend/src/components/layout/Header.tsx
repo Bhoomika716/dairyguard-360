@@ -78,10 +78,10 @@ export const Header: React.FC<HeaderProps> = ({
             className="bg-slate-900/90 border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
           >
             <option value="Plant Manager">👔 Plant Manager</option>
-            <option value="Hygiene Officer">🧼 Hygiene Officer</option>
-            <option value="Sustainability Officer">🌱 Sustainability Officer</option>
-            <option value="Operations Manager">⚡ Operations Manager</option>
-            <option value="Consumer">♻️ Consumer</option>
+            <option value="Sustainability Manager">🌱 Sustainability Manager</option>
+            <option value="Quality Manager">🧼 Quality Manager</option>
+            <option value="Maintenance Manager">🔧 Maintenance Manager</option>
+            <option value="Consumer">♻️ Consumer Portal</option>
           </select>
         </div>
 
@@ -90,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600/90 to-teal-600/90 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 py-1.5 rounded-lg shadow-md shadow-emerald-900/30 transition-all font-medium border border-emerald-400/30"
         >
           <Sparkles className="h-3.5 w-3.5 animate-pulse text-emerald-200" />
-          <span className="hidden sm:inline">DairyGuard AI</span>
+          <span className="hidden sm:inline">AI Advisor</span>
         </button>
 
         <button className="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700 transition">
@@ -106,6 +106,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="h-7 w-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
             <User className="h-4 w-4 text-emerald-400" />
           </div>
+          <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 font-mono" title="Demo Authentication Active">
+            DEMO AUTH
+          </span>
         </div>
       </div>
     </header>

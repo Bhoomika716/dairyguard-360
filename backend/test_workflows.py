@@ -72,6 +72,52 @@ def test_alerts_endpoint():
     data = response.json()
     assert isinstance(data, list)
 
+def test_equipment_intelligence():
+    response = client.get("/api/equipment")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 6
+
+def test_hygiene_5_areas():
+    response = client.get("/api/hygiene")
+    assert response.status_code == 200
+    data = response.json()
+    assert "hygiene_compliance_score" in data
+    assert "heatmap_areas" in data
+    assert len(data["heatmap_areas"]) == 5
+
+def test_waste_logging_workflow():
+    payload = {
+        "type": "Plastic Packaging",
+        "qty": 75.5,
+        "unit": "kg",
+        "processing_method": "Polymer Recovery Plant"
+    }
+    response = client.post("/api/waste", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "SUCCESS"
+
+def test_alert_action_and_reset():
+    # Trigger incident
+    resp_inc = client.post("/api/demo/trigger-incident?scenario=energy_spike")
+    assert resp_inc.status_code == 200
+
+    # Get alert list
+    alerts = client.get("/api/alerts").json()
+    if alerts:
+        aid = alerts[0]["id"]
+        ack = client.post(f"/api/alerts/{aid}/acknowledge")
+        assert ack.status_code == 200
+        res = client.post(f"/api/alerts/{aid}/resolve")
+        assert res.status_code == 200
+
+    # Reset plant
+    rst = client.post("/api/demo/reset")
+    assert rst.status_code == 200
+    assert rst.json()["status"] == "PLANT_RESET"
+
 if __name__ == "__main__":
     seed_database()
     test_root_endpoint()
@@ -80,4 +126,9 @@ if __name__ == "__main__":
     test_consumer_return_workflow()
     test_whatif_simulation_workflow()
     test_alerts_endpoint()
+    test_equipment_intelligence()
+    test_hygiene_5_areas()
+    test_waste_logging_workflow()
+    test_alert_action_and_reset()
     print("ALL WORKFLOW TESTS PASSED 100%!")
+

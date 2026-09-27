@@ -5,7 +5,6 @@ import {
   UserCheck, 
   Plus, 
   X,
-  ChevronRight,
   Flame,
   FileCheck
 } from 'lucide-react';
@@ -31,8 +30,15 @@ export const HygieneCompliance: React.FC<HygieneComplianceProps> = ({ data, onRe
     return <div className="p-12 text-center text-slate-400 font-mono">Loading Hygiene Telemetry...</div>;
   }
 
-  const heatmapZones = data.heatmap_zones || [];
+  const heatmapAreas = data.heatmap_areas || [
+    { id: 'receiving', name: 'Receiving Dock', score: 98.0, missed_checks: 0, status: 'GREEN', compliance: 'Compliant', risk: 'LOW', corrective_action: 'None required', last_inspection: 'Today, 08:30 UTC' },
+    { id: 'pasteurization', name: 'Pasteurization Hall', score: 96.0, missed_checks: 0, status: 'GREEN', compliance: 'Compliant', risk: 'LOW', corrective_action: 'None required', last_inspection: 'Today, 09:15 UTC' },
+    { id: 'packaging', name: 'Packaging Floor', score: 88.0, missed_checks: 1, status: 'YELLOW', compliance: 'Needs attention', risk: 'MEDIUM', corrective_action: 'Recalibrate ATP swab sensor', last_inspection: 'Today, 10:00 UTC' },
+    { id: 'cold_storage', name: 'Cold Storage', score: 97.0, missed_checks: 0, status: 'GREEN', compliance: 'Compliant', risk: 'LOW', corrective_action: 'None required', last_inspection: 'Today, 07:45 UTC' },
+    { id: 'dispatch', name: 'Dispatch Bay', score: 94.0, missed_checks: 0, status: 'GREEN', compliance: 'Compliant', risk: 'LOW', corrective_action: 'Inspect truck sanitation log', last_inspection: 'Today, 11:10 UTC' }
+  ];
   const checklists = data.checklists || [];
+  const complianceScore = data.hygiene_compliance_score || 96.0;
 
   const handleCreateAction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +53,7 @@ export const HygieneCompliance: React.FC<HygieneComplianceProps> = ({ data, onRe
         status: 'OPEN'
       });
       setShowModal(false);
-      setForm({ issue: '', area: 'Cleaning Area', severity: 'MEDIUM', assigned_to: 'Rajesh Kumar' });
+      setForm({ issue: '', area: 'Packaging Floor', severity: 'MEDIUM', assigned_to: 'Karan Verma' });
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -62,10 +68,10 @@ export const HygieneCompliance: React.FC<HygieneComplianceProps> = ({ data, onRe
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-sky-400" />
-            Hygiene & Compliance Command
+            Hygiene & Sanitation Intelligence
           </h2>
           <p className="text-xs text-slate-400">
-            Digital hygiene risk score, clickable zone heatmaps, and SLA corrective action tracking.
+            Real-time compliance monitoring across 5 critical dairy plant sections.
           </p>
         </div>
 
@@ -80,22 +86,22 @@ export const HygieneCompliance: React.FC<HygieneComplianceProps> = ({ data, onRe
 
       <div className="grid md:grid-cols-3 gap-5">
         <div className="glass-panel p-5 rounded-2xl space-y-2 border border-sky-500/30">
-          <span className="text-xs font-mono uppercase text-slate-400">Overall Hygiene Score</span>
+          <span className="text-xs font-mono uppercase text-slate-400">Hygiene Compliance Score</span>
           <div className="text-3xl font-extrabold text-sky-400 font-mono">
-            {data.overall_hygiene_score}%
+            {complianceScore}% <span className="text-xs text-emerald-400 font-semibold font-sans">Compliant</span>
           </div>
           <span className="inline-block px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold">
-            EXCELLENT COMPLIANCE
+            HIGH COMPLIANCE BASELINE
           </span>
         </div>
 
         <div className="glass-panel p-5 rounded-2xl space-y-2">
-          <span className="text-xs font-mono uppercase text-slate-400">Digital Hygiene Risk Index</span>
+          <span className="text-xs font-mono uppercase text-slate-400">Missed Sanitation Checks</span>
           <div className="text-3xl font-extrabold text-amber-400 font-mono">
-            {data.digital_hygiene_risk} <span className="text-sm text-slate-400">/100</span>
+            {data.missed_checks_count || 0} <span className="text-sm text-slate-400 font-sans">Pending</span>
           </div>
           <span className="inline-block px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold">
-            RISK LEVEL: {data.risk_level}
+            {data.missed_checks_count > 0 ? 'ATTENTION REQUIRED' : 'ZERO MISSED CHECKS'}
           </span>
         </div>
 
@@ -117,47 +123,48 @@ export const HygieneCompliance: React.FC<HygieneComplianceProps> = ({ data, onRe
           <span className="text-xs text-slate-400 font-mono">Click any zone for active audit logs</span>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {heatmapZones.map((zone: any) => {
-            const isCritical = zone.status === 'VIOLATION' || zone.risk === 'HIGH';
-            const isAttention = zone.status === 'ATTENTION' || zone.risk === 'MEDIUM';
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {heatmapAreas.map((area: any) => {
+            const isRed = area.status === 'RED' || area.compliance === 'Non-compliant';
+            const isYellow = area.status === 'YELLOW' || area.compliance === 'Needs attention';
 
             return (
               <button
-                key={zone.id}
-                onClick={() => setSelectedZone(zone)}
-                className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-                  isCritical
+                key={area.id}
+                onClick={() => setSelectedZone(area)}
+                className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+                  isRed
                     ? 'bg-rose-950/40 border-rose-500/50 hover:border-rose-400 shadow-lg shadow-rose-950/50'
-                    : isAttention
+                    : isYellow
                     ? 'bg-amber-950/40 border-amber-500/50 hover:border-amber-400'
                     : 'bg-slate-900/80 border-slate-800 hover:border-sky-500/40'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-200 tracking-wider font-mono">
-                    {zone.name}
+                    {area.name}
                   </span>
                   <span className={`h-2.5 w-2.5 rounded-full ${
-                    isCritical ? 'bg-rose-500 animate-ping' : isAttention ? 'bg-amber-400' : 'bg-emerald-400'
+                    isRed ? 'bg-rose-500 animate-ping' : isYellow ? 'bg-amber-400' : 'bg-emerald-400'
                   }`} />
                 </div>
 
-                <div className="mt-4 space-y-1">
-                  <div className="text-2xl font-black font-mono text-white">
-                    {zone.score}%
+                <div className="mt-3 space-y-1">
+                  <div className="text-xl font-black font-mono text-white">
+                    {area.score}%
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Risk: <strong className={isCritical ? 'text-rose-400' : isAttention ? 'text-amber-400' : 'text-emerald-400'}>{zone.risk}</strong></span>
-                    {zone.failed_checks > 0 && (
-                      <span className="text-rose-400 font-bold">{zone.failed_checks} failed</span>
-                    )}
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${
+                      isRed ? 'bg-rose-500/20 text-rose-300' : isYellow ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {area.status} • {area.compliance}
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 group-hover:text-sky-400 transition">
-                  <span>Inspect Zone</span>
-                  <ChevronRight className="h-3 w-3" />
+                <div className="mt-3 pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 space-y-0.5">
+                  <p className="truncate"><strong className="text-slate-300">Action:</strong> {area.corrective_action}</p>
+                  <p className="text-[9px] text-slate-500 font-mono">{area.last_inspection}</p>
                 </div>
               </button>
             );

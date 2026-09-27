@@ -6,6 +6,7 @@ import { AIAssistantDrawer } from './components/ai/AIAssistantDrawer';
 
 import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
+import { EquipmentIntelligence } from './pages/EquipmentIntelligence';
 import { EnergyIntelligence } from './pages/EnergyIntelligence';
 import { HygieneCompliance } from './pages/HygieneCompliance';
 import { PackagingWaste } from './pages/PackagingWaste';
@@ -26,6 +27,7 @@ import {
   fetchAlerts,
   toggleDemoMode,
   triggerPlantIncident,
+  resetPlantSimulation,
   triggerSimulatedTick
 } from './services/api';
 
@@ -49,7 +51,7 @@ export function App() {
         fetchEnergyIntelligence(),
         fetchHygieneData(),
         fetchPackagingWaste(),
-        fetchAlerts('OPEN')
+        fetchAlerts('NEW')
       ]);
 
       setDashboardData(dash);
@@ -87,11 +89,20 @@ export function App() {
     }
   };
 
-  const handleTriggerIncident = async () => {
+  const handleTriggerIncident = async (scenario: string = 'general') => {
     try {
-      await triggerPlantIncident();
-      refreshAllData();
+      await triggerPlantIncident(scenario);
+      await refreshAllData();
       setActiveTab('alerts');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleResetPlant = async () => {
+    try {
+      await resetPlantSimulation();
+      await refreshAllData();
     } catch (err) {
       console.error(err);
     }
@@ -121,6 +132,7 @@ export function App() {
         isDemoMode={isDemoMode}
         onToggleDemoMode={handleToggleDemoMode}
         onTriggerIncident={handleTriggerIncident}
+        onResetPlant={handleResetPlant}
         onSimulateTick={handleSimulateTick}
       />
 
@@ -143,6 +155,10 @@ export function App() {
               onNavigate={setActiveTab}
               onOpenAIChat={() => setIsAIChatOpen(true)}
             />
+          )}
+
+          {activeTab === 'equipment' && (
+            <EquipmentIntelligence />
           )}
 
           {activeTab === 'energy' && (

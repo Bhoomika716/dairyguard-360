@@ -152,14 +152,54 @@ export async function askAIAdvisor(question: string) {
   return res.json();
 }
 
+export async function fetchEquipmentIntelligence() {
+  const res = await fetch(`${API_BASE}/equipment`);
+  if (!res.ok) throw new Error('Failed to fetch equipment intelligence');
+  return res.json();
+}
+
+export async function fetchWasteLogs() {
+  const res = await fetch(`${API_BASE}/waste/logs`);
+  if (!res.ok) throw new Error('Failed to fetch waste logs');
+  return res.json();
+}
+
+export async function logWasteItem(payload: { type: string; qty: number; unit?: string; processing_method?: string }) {
+  const res = await fetch(`${API_BASE}/waste`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Failed to log waste item');
+  return res.json();
+}
+
+export async function acknowledgeAlert(alertId: number) {
+  const res = await fetch(`${API_BASE}/alerts/${alertId}/acknowledge`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to acknowledge alert');
+  return res.json();
+}
+
+export async function resolveAlert(alertId: number) {
+  const res = await fetch(`${API_BASE}/alerts/${alertId}/resolve`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to resolve alert');
+  return res.json();
+}
+
+export async function resetPlantSimulation() {
+  const res = await fetch(`${API_BASE}/demo/reset`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to reset plant simulation');
+  return res.json();
+}
+
 export async function toggleDemoMode(enabled: boolean) {
   const res = await fetch(`${API_BASE}/demo/mode?enabled=${enabled}`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to toggle demo mode');
   return res.json();
 }
 
-export async function triggerPlantIncident() {
-  const res = await fetch(`${API_BASE}/demo/trigger-incident`, { method: 'POST' });
+export async function triggerPlantIncident(scenario: string = 'general') {
+  const res = await fetch(`${API_BASE}/demo/trigger-incident?scenario=${scenario}`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to trigger plant incident');
   return res.json();
 }

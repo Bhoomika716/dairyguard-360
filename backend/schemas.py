@@ -143,8 +143,15 @@ class SimulationResultSchema(BaseModel):
 
 class AlertActionSchema(BaseModel):
     alert_id: int
-    action: str # ACKNOWLEDGE, ASSIGN, RESOLVED
+    action: str # ACKNOWLEDGE, ASSIGN, RESOLVE
     assigned_to: Optional[str] = None
 
 class AIQuestionSchema(BaseModel):
     question: str
+
+class WasteLogCreateSchema(BaseModel):
+    type: str
+    qty: float
+    unit: str = "kg"
+    processing_method: Optional[str] = "Recycling Plant"
+

@@ -18,9 +18,18 @@ class Machine(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
+    code = Column(String, nullable=True)
     zone = Column(String)
     status = Column(String, default="NORMAL")
     power_rating_kw = Column(Float, default=45.0)
+    current_kw = Column(Float, default=45.0)
+    normal_kw = Column(Float, default=45.0)
+    health_score = Column(Float, default=95.0)
+    operating_state = Column(String, default="RUNNING")
+    anomaly_status = Column(String, default="NORMAL")
+    temperature_c = Column(Float, nullable=True)
+    last_maintenance = Column(String, default="2026-09-15")
+    recommended_action = Column(Text, nullable=True)
 
 class ProductionRecord(Base):
     __tablename__ = "production_records"
@@ -59,6 +68,8 @@ class HygieneInspection(Base):
     overall_score = Column(Float)
     risk_level = Column(String, default="LOW")
     status = Column(String, default="PASSED")
+    missed_checks = Column(Integer, default=0)
+    last_check_time = Column(String, nullable=True)
 
 class HygieneChecklist(Base):
     __tablename__ = "hygiene_checklists"
@@ -106,6 +117,19 @@ class PackagingRecord(Base):
     weight_kg = Column(Float)
     recovered_qty = Column(Integer, default=0)
 
+class WasteLog(Base):
+    __tablename__ = "waste_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    type = Column(String)
+    qty = Column(Float)
+    unit = Column(String, default="kg")
+    status = Column(String, default="Scheduled")
+    collection_date = Column(String, nullable=True)
+    processing_method = Column(String, default="Recycling Plant")
+    recycling_rate_pct = Column(Float, default=85.0)
+
 class ConsumerReturn(Base):
     __tablename__ = "consumer_returns"
 
@@ -141,10 +165,12 @@ class Alert(Base):
     severity = Column(String)
     title = Column(String)
     message = Column(Text)
+    affected_target = Column(String, nullable=True)
     observed_value = Column(String, nullable=True)
     expected_value = Column(String, nullable=True)
     deviation = Column(String, nullable=True)
-    status = Column(String, default="OPEN")
+    recommended_action = Column(Text, nullable=True)
+    status = Column(String, default="NEW")
     assigned_to = Column(String, nullable=True)
 
 class AIInsight(Base):

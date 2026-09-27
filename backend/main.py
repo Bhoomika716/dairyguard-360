@@ -1,4 +1,5 @@
 import os
+import random
 from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query
@@ -313,28 +314,137 @@ def get_energy_intelligence(db: Session = Depends(get_db)):
     }
 
 # -------------------------------------------------------------------
-# 4. HYGIENE & COMPLIANCE
+# 2.5 EQUIPMENT HEALTH CENTER
+# -------------------------------------------------------------------
+@app.get("/api/equipment")
+def get_equipment_intelligence(db: Session = Depends(get_db)):
+    machines = db.query(models.Machine).all()
+    result = []
+    for m in machines:
+        c_kw = m.current_kw or m.power_rating_kw or 45.0
+        n_kw = m.normal_kw or m.power_rating_kw or 45.0
+        dev_pct = round(((c_kw - n_kw) / max(1.0, n_kw)) * 100.0, 1)
+        
+        # Calculate Equipment Health Score = energy stability + operating stability + anomaly history + maintenance condition
+        health = m.health_score if m.health_score is not None else 92.0
+        if dev_pct > 20:
+            health = max(40.0, health - dev_pct * 0.5)
+
+        # Generate smooth trend array
+        trend = [round(n_kw * random.uniform(0.95, 1.05), 1) for _ in range(6)] + [c_kw]
+
+        result.append({
+            "id": m.id,
+            "name": m.name,
+            "code": m.code or f"EQ-{m.id:02d}",
+            "zone": m.zone,
+            "current_kw": c_kw,
+            "normal_kw": n_kw,
+            "deviation_pct": dev_pct,
+            "health_score": round(health, 1),
+            "operating_state": m.operating_state or "RUNNING",
+            "anomaly_status": m.anomaly_status or "NORMAL",
+            "status": m.status or "NORMAL",
+            "temperature_c": m.temperature_c,
+            "last_maintenance": m.last_maintenance or "2026-09-15",
+            "recommended_action": m.recommended_action or "Routine operational check",
+            "trend": trend
+        })
+    return result
+
+# -------------------------------------------------------------------
+# 3. ENERGY INTELLIGENCE & ANOMALIES
+# -------------------------------------------------------------------
+@app.get("/api/energy")
+def get_energy_intelligence(db: Session = Depends(get_db)):
+    readings = db.query(models.EnergyReading).order_by(models.EnergyReading.timestamp.desc()).limit(30).all()
+    readings_data = [
+        {
+            "id": r.id,
+            "timestamp": r.timestamp.strftime("%b %d, %H:%M"),
+            "total_kwh": r.total_kwh,
+            "power_factor": r.power_factor,
+            "peak_load_kw": r.peak_load_kw,
+            "refrigeration_load_kwh": r.refrigeration_load_kwh,
+            "cleaning_load_kwh": r.cleaning_load_kwh,
+            "processing_load_kwh": r.processing_load_kwh,
+            "energy_per_litre": r.energy_per_litre,
+            "is_anomaly": r.is_anomaly
+        }
+        for r in reversed(readings)
+    ]
+
+    machines = db.query(models.Machine).all()
+    machine_breakdown = [
+        {
+            "id": m.id,
+            "name": m.name,
+            "code": m.code or f"EQ-{m.id:02d}",
+            "zone": m.zone,
+            "status": m.status,
+            "current_kw": m.current_kw or m.power_rating_kw,
+            "normal_kw": m.normal_kw or m.power_rating_kw,
+            "deviation_pct": round((((m.current_kw or m.power_rating_kw) - (m.normal_kw or m.power_rating_kw)) / max(1.0, m.normal_kw or m.power_rating_kw)) * 100, 1),
+            "share_pct": round(((m.current_kw or m.power_rating_kw)/250.0)*100, 1)
+        }
+        for m in machines
+    ]
+
+    latest = readings[0] if readings else None
+
+    return {
+        "current_plant_kw": sum(m.current_kw or m.power_rating_kw for m in machines),
+        "normal_plant_kw": sum(m.normal_kw or m.power_rating_kw for m in machines),
+        "peak_energy_kw": max([r.peak_load_kw for r in readings] if readings else [145.0]),
+        "average_energy_kwh": round(sum([r.total_kwh for r in readings])/max(1, len(readings)), 1) if readings else 82.4,
+        "energy_efficiency_score": 88.5 if not (latest and latest.is_anomaly) else 64.0,
+        "current_efficiency_kwh_l": latest.energy_per_litre if latest else 0.0021,
+        "target_efficiency_kwh_l": 0.0017,
+        "efficiency_deviation_pct": round(((latest.energy_per_litre - 0.0017)/0.0017)*100, 1) if latest else 23.5,
+        "efficiency_status": "ATTENTION" if (latest and latest.energy_per_litre > 0.0020) else "NORMAL",
+        "readings": readings_data,
+        "machine_breakdown": machine_breakdown
+    }
+
+# -------------------------------------------------------------------
+# 4. HYGIENE & COMPLIANCE (5 Core Areas)
 # -------------------------------------------------------------------
 @app.get("/api/hygiene")
 def get_hygiene_module(db: Session = Depends(get_db)):
     latest_insp = db.query(models.HygieneInspection).order_by(models.HygieneInspection.timestamp.desc()).first()
     checklists = db.query(models.HygieneChecklist).all()
+    open_violations = db.query(models.HygieneViolation).filter(models.HygieneViolation.status != "RESOLVED").all()
 
-    open_violations_count = db.query(models.HygieneViolation).filter(models.HygieneViolation.status != "RESOLVED").count()
-    risk_score = min(100, (open_violations_count * 15) + (100 - (latest_insp.overall_score if latest_insp else 94.8)))
-
-    heatmap_zones = [
-        {"id": "processing", "name": "PROCESSING AREA", "status": "NORMAL", "risk": "LOW", "score": 96.2, "failed_checks": 0},
-        {"id": "packaging", "name": "PACKAGING AREA", "status": "ATTENTION", "risk": "MEDIUM", "score": 88.5, "failed_checks": 1},
-        {"id": "storage", "name": "STORAGE VAULT", "status": "NORMAL", "risk": "LOW", "score": 98.0, "failed_checks": 0},
-        {"id": "cleaning", "name": "CLEANING AREA", "status": "VIOLATION" if simulation_engine.incident_active else "ATTENTION", "risk": "HIGH", "score": 78.4 if simulation_engine.incident_active else 86.0, "failed_checks": 2}
+    # 5 Key Plant Areas from reference project requirements
+    five_areas = [
+        {"id": "receiving", "name": "Receiving Dock", "score": 98.0, "missed_checks": 0, "status": "GREEN", "compliance": "Compliant", "risk": "LOW", "corrective_action": "None required", "last_inspection": "Today, 08:30 UTC"},
+        {"id": "pasteurization", "name": "Pasteurization Hall", "score": 96.0, "missed_checks": 0, "status": "GREEN", "compliance": "Compliant", "risk": "LOW", "corrective_action": "None required", "last_inspection": "Today, 09:15 UTC"},
+        {"id": "packaging", "name": "Packaging Floor", "score": 78.5 if simulation_engine.incident_active else 88.0, "missed_checks": 1 if simulation_engine.incident_active else 0, "status": "RED" if simulation_engine.incident_active else "YELLOW", "compliance": "Non-compliant" if simulation_engine.incident_active else "Needs attention", "risk": "HIGH" if simulation_engine.incident_active else "MEDIUM", "corrective_action": "Initiate emergency steam sanitation flush" if simulation_engine.incident_active else "Recalibrate ATP swab sensor", "last_inspection": "Today, 10:00 UTC"},
+        {"id": "cold_storage", "name": "Cold Storage", "score": 97.0, "missed_checks": 0, "status": "GREEN", "compliance": "Compliant", "risk": "LOW", "corrective_action": "None required", "last_inspection": "Today, 07:45 UTC"},
+        {"id": "dispatch", "name": "Dispatch Bay", "score": 94.0, "missed_checks": 0, "status": "GREEN", "compliance": "Compliant", "risk": "LOW", "corrective_action": "Inspect truck sanitation log", "last_inspection": "Today, 11:10 UTC"}
     ]
 
+    avg_score = round(sum(a["score"] for a in five_areas) / len(five_areas), 1)
+    missed_count = sum(a["missed_checks"] for a in five_areas)
+
     return {
-        "overall_hygiene_score": latest_insp.overall_score if latest_insp else 94.8,
-        "digital_hygiene_risk": round(risk_score, 1),
-        "risk_level": "LOW" if risk_score < 25 else ("MEDIUM" if risk_score < 50 else "HIGH"),
-        "heatmap_zones": heatmap_zones,
+        "hygiene_compliance_score": avg_score, # e.g. 96.0%
+        "overall_hygiene_score": avg_score,
+        "missed_checks_count": missed_count,
+        "risk_level": "LOW" if avg_score >= 90 else ("MEDIUM" if avg_score >= 80 else "HIGH"),
+        "heatmap_areas": five_areas,
+        "open_violations": [
+            {
+                "id": v.id,
+                "zone": v.zone,
+                "title": v.title,
+                "description": v.description,
+                "severity": v.severity,
+                "status": v.status,
+                "timestamp": v.timestamp.strftime("%b %d, %H:%M")
+            }
+            for v in open_violations
+        ],
         "checklists": [
             {"id": c.id, "item_name": c.item_name, "status": c.status, "notes": c.notes}
             for c in checklists
@@ -701,6 +811,58 @@ def take_alert_action(payload: schemas.AlertActionSchema, db: Session = Depends(
     db.commit()
     return {"status": "SUCCESS", "alert_id": alert.id, "new_status": alert.status}
 
+@app.post("/api/waste")
+def create_waste_log(payload: schemas.WasteLogCreateSchema, db: Session = Depends(get_db)):
+    wlog = models.WasteLog(
+        type=payload.type,
+        qty=payload.qty,
+        unit=payload.unit,
+        status="Scheduled",
+        collection_date=datetime.utcnow().strftime("%Y-%m-%d"),
+        processing_method=payload.processing_method or "Recycling Plant",
+        recycling_rate_pct=88.0
+    )
+    db.add(wlog)
+    db.commit()
+    db.refresh(wlog)
+    return {"status": "SUCCESS", "id": wlog.id, "message": f"{payload.qty} {payload.unit} of {payload.type} logged for recycling."}
+
+@app.get("/api/waste/logs")
+def get_waste_logs(db: Session = Depends(get_db)):
+    logs = db.query(models.WasteLog).order_by(models.WasteLog.created_at.desc()).limit(30).all()
+    return [
+        {
+            "id": w.id,
+            "type": w.type,
+            "qty": w.qty,
+            "unit": w.unit,
+            "status": w.status,
+            "collection_date": w.collection_date or w.created_at.strftime("%Y-%m-%d"),
+            "processing_method": w.processing_method,
+            "recycling_rate_pct": w.recycling_rate_pct,
+            "created_at": w.created_at.strftime("%b %d, %H:%M")
+        }
+        for w in logs
+    ]
+
+@app.post("/api/alerts/{alert_id}/acknowledge")
+def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    alert.status = "ACKNOWLEDGED"
+    db.commit()
+    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": "ACKNOWLEDGED"}
+
+@app.post("/api/alerts/{alert_id}/resolve")
+def resolve_alert(alert_id: int, db: Session = Depends(get_db)):
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    alert.status = "RESOLVED"
+    db.commit()
+    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": "RESOLVED"}
+
 # -------------------------------------------------------------------
 # 11. DEMO MODE & SIMULATION TICKS
 # -------------------------------------------------------------------
@@ -710,8 +872,12 @@ def toggle_demo_mode(enabled: bool = Query(...)):
     return {"demo_mode": res, "message": f"Demo mode {'enabled' if res else 'disabled'}"}
 
 @app.post("/api/demo/trigger-incident")
-def trigger_plant_incident(db: Session = Depends(get_db)):
-    return simulation_engine.trigger_incident(db)
+def trigger_plant_incident(scenario: str = Query("general"), db: Session = Depends(get_db)):
+    return simulation_engine.trigger_incident(db, scenario=scenario)
+
+@app.post("/api/demo/reset")
+def reset_plant_demo(db: Session = Depends(get_db)):
+    return simulation_engine.reset_plant(db)
 
 @app.post("/api/simulation/tick")
 def trigger_simulated_tick(db: Session = Depends(get_db)):
@@ -719,17 +885,24 @@ def trigger_simulated_tick(db: Session = Depends(get_db)):
 
 @app.get("/api/reports")
 def generate_report(report_type: str = "daily", db: Session = Depends(get_db)):
+    machines = db.query(models.Machine).all()
+    eq_summary = [
+        {"equipment": m.name, "power_kw": m.current_kw or m.power_rating_kw, "health": m.health_score or 92, "status": m.status}
+        for m in machines
+    ]
     return {
-        "report_title": f"{report_type.capitalize()} Sustainability & Operations Report",
+        "report_title": f"{report_type.capitalize()} Plant Operations & Intelligence Report",
         "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "plant": "Alpha Dairy Plant - Sector 4",
         "summary": {
             "total_production_litres": 42500,
             "total_energy_mwh": 82.4,
-            "avg_hygiene_score": 94.8,
+            "hygiene_compliance_score": 96.0,
+            "equipment_health_average": round(sum(m.health_score or 92 for m in machines)/max(1, len(machines)), 1),
             "packaging_recovery_rate": 78.2,
             "overall_sustainability_score": 87,
             "carbon_avoided_tonnes": 5.42
         },
-        "top_ai_recommendation": "Optimize Chiller Array expansion valves and schedule high-volume packaging runs during off-peak tariff hours."
+        "equipment_breakdown": eq_summary,
+        "top_ai_recommendation": "Maintain Chiller Unit B thermal load within baseline operating window; schedule Pasteurizer 2 tube descaling."
     }

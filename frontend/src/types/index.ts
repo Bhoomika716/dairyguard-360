@@ -1,4 +1,4 @@
-export type RoleType = 'Plant Manager' | 'Hygiene Officer' | 'Sustainability Officer' | 'Operations Manager' | 'Consumer';
+export type RoleType = 'Plant Manager' | 'Sustainability Manager' | 'Quality Manager' | 'Maintenance Manager' | 'Consumer';
 
 export interface KPICardData {
   title: string;
@@ -52,6 +52,48 @@ export interface OpportunityItem {
   domain: string;
   potential_saving: string;
   description: string;
+}
+
+export interface EquipmentItem {
+  id: number;
+  name: string;
+  code: string;
+  zone: string;
+  current_kw: number;
+  normal_kw: number;
+  deviation_pct: number;
+  health_score: number;
+  operating_state: string;
+  anomaly_status: string;
+  status: string;
+  temperature_c?: number;
+  last_maintenance: string;
+  recommended_action: string;
+  trend: number[];
+}
+
+export interface HygieneArea {
+  id: string;
+  name: string;
+  score: number;
+  missed_checks: number;
+  status: 'GREEN' | 'YELLOW' | 'RED';
+  compliance: 'Compliant' | 'Needs attention' | 'Non-compliant';
+  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  corrective_action: string;
+  last_inspection: string;
+}
+
+export interface WasteLogItem {
+  id: number;
+  type: string;
+  qty: number;
+  unit: string;
+  status: string;
+  collection_date?: string;
+  processing_method?: string;
+  recycling_rate_pct?: number;
+  created_at?: string;
 }
 
 export interface IncidentStep {
@@ -159,10 +201,12 @@ export interface AlertItem {
   severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   title: string;
   message: string;
+  affected_target?: string;
   observed_value?: string;
   expected_value?: string;
   deviation?: string;
-  status: 'OPEN' | 'ACKNOWLEDGED' | 'ASSIGNED' | 'RESOLVED';
+  recommended_action?: string;
+  status: 'NEW' | 'OPEN' | 'ACKNOWLEDGED' | 'ASSIGNED' | 'RESOLVED';
   assigned_to?: string;
   timestamp: string;
 }
