@@ -159,8 +159,9 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
         "hygiene_health": latest_health.hygiene_health if latest_health else (latest_hygiene.overall_score if latest_hygiene else 94.8),
         "production_health": latest_health.production_health if latest_health else 88.0,
         "waste_health": pkg_recovery_val,
-        "alert_health": latest_health.alert_health if latest_health else 85.0
+        "alert_health": getattr(latest_health, "alert_health", 85.0) if latest_health else 85.0
     }
+
 
     return {
         "plant_status": "SYSTEM OPERATIONAL" if not simulation_engine.incident_active else "INCIDENT ATTENTION REQUIRED",
